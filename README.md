@@ -6,7 +6,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.9+-blue?style=for-the-badge&logo=python)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
-[![PyPI](https://img.shields.io/badge/PyPI-3.0.0-orange?style=for-the-badge&logo=pypi)](https://pypi.org)
+[![PyPI](https://img.shields.io/badge/PyPI-3.0.1-orange?style=for-the-badge&logo=pypi)](https://pypi.org)
 
 **Genera proyectos FastAPI completos en segundos** 🚀
 
@@ -459,7 +459,7 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detal
 
 <div align="center">
 
-<img src="assets/author.jpg" alt="Juan - Creador de Lara" width="150" style="border-radius: 50%;"/>
+<img src="assets/creador.jpeg" alt="Juan - Creador de Lara" width="150" style="border-radius: 50%;"/>
 
 ### Desarrollado con ❤️ por Juan David - Alias Boajerges
 **[SoliDeoGloria123](https://github.com/SoliDeoGloria123)**
