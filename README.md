@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="assets/logo.png" alt="Lara Logo" width="200"/>
+<img src="assets/logo.png" alt="Lara Logo" width="120"/>
 
 [![Python](https://img.shields.io/badge/python-3.9+-blue?style=for-the-badge&logo=python)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
@@ -457,19 +457,28 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detal
 
 ## 🌟 Créditos
 
-Desarrollado con ❤️ por [SoliDeoGloria123](https://github.com/SoliDeoGloria123)
+<div align="center">
 
-Inspirado en:
-- Laravel Artisan (PHP)
-- Entity Framework Core CLI (.NET)
-- Django Management Commands (Python)
+<img src="assets/author.jpg" alt="Juan - Creador de Lara" width="150" style="border-radius: 50%;"/>
+
+### Desarrollado con ❤️ por Juan David - Alias Boajerges
+**[SoliDeoGloria123](https://github.com/SoliDeoGloria123)**
+
+*"Creando herramientas para que los desarrolladores se enfoquen en lo que realmente importa: resolver problemas."*
+
+</div>
+
+**Inspirado en:**
+- 🎨 Laravel Artisan (PHP)
+- ⚙️ Entity Framework Core CLI (.NET)
+- 🐍 Django Management Commands (Python)
 
 ---
 
 ## 📞 Soporte
 
 - 🐛 **Issues**: [GitHub Issues](https://github.com/SoliDeoGloria123/Lara/issues)
-- 📧 **Email**: contact@lara-cli.dev
+- 📧 **Email**: juan.juand.dev@gmail.com
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/SoliDeoGloria123/Lara/discussions)
 
 ---
