@@ -59,30 +59,44 @@ def create(
 
 
 @app.command(name="get-database")
-def get_database():
+def get_database(
+    connection_string: Optional[str] = typer.Option(
+        None, 
+        "--connection", 
+        "-c",
+        help="Connection string de la base de datos (MongoDB o SQL)"
+    )
+):
     """Analiza la base de datos y muestra su estructura completa (SQL o MongoDB)"""
     
     console.print("\n[yellow]🔍 Analizando base de datos...[/yellow]\n")
     
-    # Verificar .env
-    if not Path(".env").exists():
-        console.print("[bold red]❌ No se encontró archivo .env[/bold red]")
-        console.print("[yellow]💡 Asegúrate de estar en la raíz del proyecto y tener DATABASE_URL o MONGODB_URL[/yellow]\n")
-        raise typer.Exit(1)
-    
-    # Detectar tipo de base de datos desde .env
-    from dotenv import load_dotenv
-    load_dotenv()
-    
-    database_url = os.getenv("DATABASE_URL")
-    mongodb_url = os.getenv("MONGODB_URL")
-    database_type = os.getenv("DATABASE_TYPE", "").lower()
+    # Si no se proporciona por parámetro, pedir por terminal
+    if not connection_string:
+        # Intentar leer desde .env primero
+        if Path(".env").exists():
+            from dotenv import load_dotenv
+            load_dotenv()
+            connection_string = os.getenv("MONGODB_URL") or os.getenv("DATABASE_URL")
+        
+        # Si no hay en .env, pedir por terminal
+        if not connection_string:
+            console.print("[cyan]� Ingresa el connection string de tu base de datos:[/cyan]")
+            console.print("[dim]Ejemplos:[/dim]")
+            console.print("[dim]  MongoDB: mongodb+srv://user:pass@cluster.mongodb.net/DB[/dim]")
+            console.print("[dim]  SQL Server: Data Source=localhost\\SQLEXPRESS;Initial Catalog=DB;...[/dim]")
+            console.print("[dim]  PostgreSQL: postgresql://user:pass@localhost:5432/db[/dim]\n")
+            
+            connection_string = typer.prompt("Connection string")
+            
+            if not connection_string or connection_string.strip() == "":
+                console.print("[bold red]❌ Connection string no puede estar vacío[/bold red]\n")
+                raise typer.Exit(1)
     
     # Determinar qué inspector usar
     is_mongodb = (
-        database_type == "mongodb" or 
-        mongodb_url or 
-        (database_url and "mongodb" in database_url)
+        "mongodb" in connection_string.lower() or
+        "mongodb+srv" in connection_string.lower()
     )
     
     try:
@@ -91,7 +105,7 @@ def get_database():
             from lara.inspectors.mongodb_inspector import MongoDBInspector
             
             console.print("[cyan]🔌 Conectando a MongoDB...[/cyan]")
-            inspector = MongoDBInspector()
+            inspector = MongoDBInspector(mongodb_url=connection_string)
             inspector.connect()
             
             # Información de la BD
@@ -179,7 +193,7 @@ def get_database():
         else:
             # Usar SQL Inspector
             console.print("[cyan]🔌 Conectando a base de datos SQL...[/cyan]")
-            inspector = SQLInspector()
+            inspector = SQLInspector(database_url=connection_string)
             inspector.connect()
             
             # Información de la BD

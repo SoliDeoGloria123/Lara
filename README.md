@@ -2,7 +2,8 @@
 
 <div align="center">
 
-![Lara Logo](https://img.shields.io/badge/Lara-FastAPI%20CLI-blue?style=for-the-badge&logo=fastapi)
+<img src="assets/logo.png" alt="Lara Logo" width="200"/>
+
 [![Python](https://img.shields.io/badge/python-3.9+-blue?style=for-the-badge&logo=python)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 [![PyPI](https://img.shields.io/badge/PyPI-0.1.0-orange?style=for-the-badge&logo=pypi)](https://pypi.org)
