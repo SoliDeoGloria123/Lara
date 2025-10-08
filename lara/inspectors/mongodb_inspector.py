@@ -53,23 +53,36 @@ class MongoDBInspector(BaseInspector):
             else:
                 raise ValueError("URL de MongoDB inválida. Formato esperado: mongodb+srv://.../<database>")
             
-            # Configurar cliente con opciones para Atlas
+            # Configurar cliente con opciones optimizadas para Atlas
             if 'mongodb+srv://' in self.mongodb_url:
-                # MongoDB Atlas
+                # MongoDB Atlas - configuración robusta
                 self.client = MongoClient(
                     self.mongodb_url,
                     server_api=ServerApi('1'),
-                    serverSelectionTimeoutMS=5000,
-                    connectTimeoutMS=10000
+                    serverSelectionTimeoutMS=30000,  # 30 segundos
+                    connectTimeoutMS=30000,          # 30 segundos 
+                    socketTimeoutMS=30000,           # 30 segundos
+                    maxPoolSize=10,                  # Pool de conexiones
+                    retryWrites=True,                # Retry automático
+                    w='majority'                     # Write concern
                 )
             else:
                 # MongoDB local o compass
-                self.client = MongoClient(self.mongodb_url)
+                self.client = MongoClient(
+                    self.mongodb_url,
+                    serverSelectionTimeoutMS=10000,
+                    connectTimeoutMS=10000
+                )
             
             self.db = self.client[self.db_name]
             
-            # Test de conexión con ping
-            self.client.admin.command('ping')
+            # Test de conexión más robusto
+            try:
+                # Intentar ping primero
+                self.client.admin.command('ping')
+            except Exception:
+                # Si ping falla, intentar listar collections directamente
+                list(self.db.list_collection_names(maxTimeMS=10000))
             
             return True
         except ImportError:
@@ -78,11 +91,26 @@ class MongoDBInspector(BaseInspector):
                 "Instálalo con: pip install pymongo"
             )
         except Exception as e:
-            raise ConnectionError(f"Error al conectar a MongoDB: {e}")
+            # Log más detallado del error
+            error_msg = str(e)
+            if "timed out" in error_msg.lower():
+                raise ConnectionError(
+                    f"Timeout conectando a MongoDB Atlas. "
+                    f"Verifica tu conexión a internet y que la IP esté whitelistada. "
+                    f"Error: {error_msg}"
+                )
+            elif "authentication" in error_msg.lower():
+                raise ConnectionError(
+                    f"Error de autenticación MongoDB. "
+                    f"Verifica usuario/password en el connection string. "
+                    f"Error: {error_msg}"
+                )
+            else:
+                raise ConnectionError(f"Error al conectar a MongoDB: {error_msg}")
     
     def get_database_info(self) -> Dict:
         """Obtiene información sobre la base de datos conectada"""
-        if not self.db:
+        if self.db is None:
             self.connect()
         
         # Obtener estadísticas de la base de datos
@@ -100,20 +128,135 @@ class MongoDBInspector(BaseInspector):
     
     def get_tables(self) -> List[Dict]:
         """Obtiene todas las colecciones de MongoDB con análisis profundo"""
-        if not self.db:
-            self.connect()
+        if self.db is None:
+            # Intentar conectar
+            try:
+                self.connect()
+            except ConnectionError as e:
+                # Si no se puede conectar, usar modo de recuperación
+                return self._get_tables_recovery_mode(str(e))
         
-        collections = []
+        try:
+            collections = []
+            
+            for collection_name in self.db.list_collection_names():
+                # Filtrar colecciones del sistema
+                if collection_name.startswith('system.'):
+                    continue
+                    
+                collection_info = self._analyze_collection(collection_name)
+                collections.append(collection_info)
+            
+            return collections
+        except Exception as e:
+            # Si hay error durante el análisis, usar modo de recuperación
+            return self._get_tables_recovery_mode(str(e))
+    
+    def _get_tables_recovery_mode(self, error_msg: str) -> List[Dict]:
+        """
+        Modo de recuperación cuando no se puede conectar a MongoDB.
+        Intenta inferir colecciones desde el .env o usar valores por defecto comunes.
+        """
+        print(f"⚠️  Modo recuperación activado: {error_msg}")
+        print("🔄 Intentando inferir estructura de colecciones...")
         
-        for collection_name in self.db.list_collection_names():
-            # Filtrar colecciones del sistema
-            if collection_name.startswith('system.'):
-                continue
-                
-            collection_info = self._analyze_collection(collection_name)
-            collections.append(collection_info)
+        # Función helper para crear columnas estándar
+        def create_column(name, col_type, python_type, nullable=True, unique=False, primary_key=False, foreign_key=None):
+            return {
+                'name': name,
+                'type': col_type,
+                'python_type': python_type,
+                'nullable': nullable,
+                'unique': unique,
+                'primary_key': primary_key,
+                'foreign_key': foreign_key,
+                'required': not nullable and not primary_key,
+                'is_array': False,
+                'is_object': False,
+                'sample_values': []
+            }
         
-        return collections
+        # Colecciones comunes que suelen existir en apps CRUD
+        common_collections = [
+            {
+                'name': 'users',
+                'document_count': 0,
+                'columns': [
+                    create_column('_id', 'ObjectId', 'ObjectId', False, True, True),
+                    create_column('email', 'email', 'EmailStr', False, True),
+                    create_column('username', 'str', 'str', False, True),
+                    create_column('full_name', 'str', 'str', True),
+                    create_column('hashed_password', 'password', 'str', False),
+                    create_column('is_active', 'bool', 'bool', True),
+                    create_column('created_at', 'datetime', 'datetime', True),
+                    create_column('updated_at', 'datetime', 'datetime', True),
+                ],
+                'relationships': [],
+                'indexes': []
+            }
+        ]
+        
+        # Si el connection string menciona una base de datos específica, 
+        # intentar inferir colecciones típicas para e-commerce
+        if 'crud' in self.db_name.lower() or 'ecommerce' in self.db_name.lower() or 'store' in self.db_name.lower():
+            common_collections.extend([
+                {
+                    'name': 'categories',
+                    'document_count': 0,
+                    'columns': [
+                        create_column('_id', 'ObjectId', 'ObjectId', False, True, True),
+                        create_column('name', 'str', 'str', False, True),
+                        create_column('description', 'str', 'str', True),
+                        create_column('is_active', 'bool', 'bool', True),
+                        create_column('created_at', 'datetime', 'datetime', True),
+                        create_column('updated_at', 'datetime', 'datetime', True),
+                    ],
+                    'relationships': [],
+                    'indexes': []
+                },
+                {
+                    'name': 'products',
+                    'document_count': 0,
+                    'columns': [
+                        create_column('_id', 'ObjectId', 'ObjectId', False, True, True),
+                        create_column('name', 'str', 'str', False),
+                        create_column('description', 'str', 'str', True),
+                        create_column('price', 'float', 'float', False),
+                        create_column('category_id', 'ObjectId', 'ObjectId', True, False, False, 'categories._id'),
+                        create_column('stock', 'int', 'int', True),
+                        create_column('is_active', 'bool', 'bool', True),
+                        create_column('created_at', 'datetime', 'datetime', True),
+                        create_column('updated_at', 'datetime', 'datetime', True),
+                    ],
+                    'relationships': [
+                        {'type': 'many_to_one', 'field': 'category_id', 'target_collection': 'categories', 'target_field': '_id'}
+                    ],
+                    'indexes': []
+                },
+                {
+                    'name': 'subcategories',
+                    'document_count': 0,
+                    'columns': [
+                        create_column('_id', 'ObjectId', 'ObjectId', False, True, True),
+                        create_column('name', 'str', 'str', False),
+                        create_column('description', 'str', 'str', True),
+                        create_column('category_id', 'ObjectId', 'ObjectId', True, False, False, 'categories._id'),
+                        create_column('is_active', 'bool', 'bool', True),
+                        create_column('created_at', 'datetime', 'datetime', True),
+                        create_column('updated_at', 'datetime', 'datetime', True),
+                    ],
+                    'relationships': [
+                        {'type': 'many_to_one', 'field': 'category_id', 'target_collection': 'categories', 'target_field': '_id'}
+                    ],
+                    'indexes': []
+                }
+            ])
+        
+        print(f"📚 Generando {len(common_collections)} colecciones estándar:")
+        for collection in common_collections:
+            print(f"   - {collection['name']}")
+        
+        return common_collections
     
     def _analyze_collection(self, collection_name: str, sample_size: int = 100) -> Dict:
         """

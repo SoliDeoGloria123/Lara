@@ -147,14 +147,26 @@ def create(
                 is_mongodb = "mongodb" in connection_string.lower()
                 
                 if is_mongodb:
+                    # Para MongoDB, activar las líneas correctas
+                    env_content = env_content.replace('DATABASE_TYPE=sqlite', 'DATABASE_TYPE=mongodb')
                     env_content = env_content.replace(
-                        'MONGODB_URL="mongodb://localhost:27017/mydatabase"',
-                        f'MONGODB_URL="{connection_string}"'
+                        '# MONGODB_URL=mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/database_name?retryWrites=true&w=majority&tlsAllowInvalidCertificates=true',
+                        f'MONGODB_URL={connection_string}'
+                    )
+                    env_content = env_content.replace(
+                        '# MONGODB_URL=mongodb://localhost:27017/database_name',
+                        f'MONGODB_URL={connection_string}'
+                    )
+                    # Comentar SQLite
+                    env_content = env_content.replace(
+                        'DATABASE_URL=sqlite:///./app.db',
+                        '# DATABASE_URL=sqlite:///./app.db'
                     )
                 else:
+                    # Para SQL, reemplazar DATABASE_URL
                     env_content = env_content.replace(
-                        'DATABASE_URL="sqlite:///./app.db"',
-                        f'DATABASE_URL="{connection_string}"'
+                        'DATABASE_URL=sqlite:///./app.db',
+                        f'DATABASE_URL={connection_string}'
                     )
             
             # Escribir .env
@@ -464,7 +476,29 @@ def sync_models():
     console.print("\n[yellow]🔄 Sincronizando con base de datos...[/yellow]\n")
     
     try:
-        inspector = SQLInspector()
+        # Detectar tipo de base de datos desde .env
+        if Path(".env").exists():
+            from dotenv import load_dotenv
+            load_dotenv()
+            
+            mongodb_url = os.getenv("MONGODB_URL")
+            database_url = os.getenv("DATABASE_URL")
+            
+            # Determinar qué inspector usar
+            if mongodb_url or (database_url and "mongodb" in database_url.lower()):
+                console.print("[cyan]🍃 Detectado: MongoDB[/cyan]")
+                from lara.inspectors.mongodb_inspector import MongoDBInspector
+                inspector = MongoDBInspector()
+            else:
+                console.print("[cyan]🗄️  Detectado: SQL Database[/cyan]")
+                from lara.inspectors.sql_inspector import SQLInspector
+                inspector = SQLInspector()
+        else:
+            # Sin .env, asumir SQL por defecto
+            console.print("[yellow]⚠️  No se encontró .env, asumiendo SQL[/yellow]")
+            from lara.inspectors.sql_inspector import SQLInspector
+            inspector = SQLInspector()
+        
         inspector.connect()
         
         tables = inspector.get_tables()
@@ -475,10 +509,14 @@ def sync_models():
             console.print("[green]✅ Todos los modelos están actualizados[/green]\n")
             raise typer.Exit(0)
         
-        console.print(f"[yellow]📋 Se encontraron {len(new_tables)} tablas nuevas:[/yellow]")
+        console.print(f"[yellow]📋 Se encontraron {len(new_tables)} colecciones/tablas nuevas:[/yellow]")
         for table in new_tables:
-            auth_marker = " [cyan](autenticación)[/cyan]" if inspector.is_auth_table(table['name']) else ""
-            console.print(f"  ⚠ {table['name']}{auth_marker}")
+            if hasattr(inspector, 'is_auth_collection'):
+                auth_marker = " [cyan](autenticación)[/cyan]" if inspector.is_auth_collection(table['name']) else ""
+            else:
+                auth_marker = " [cyan](autenticación)[/cyan]" if inspector.is_auth_table(table['name']) else ""
+            doc_count = table.get('document_count', table.get('row_count', 0))
+            console.print(f"  ⚠ {table['name']}{auth_marker} ({doc_count} documentos)")
         console.print()
         
         # Preguntas interactivas
@@ -486,7 +524,10 @@ def sync_models():
             raise typer.Exit(0)
         
         console.print("\n[yellow]✨ Generando modelos...[/yellow]")
-        model_gen = ModelGenerator()
+        # Detectar si es MongoDB para usar el generador correcto
+        is_mongodb = hasattr(inspector, 'is_auth_collection')
+        db_type = 'mongodb' if is_mongodb else 'sql'
+        model_gen = ModelGenerator(db_type=db_type)
         for table in new_tables:
             model_gen.generate(table)
             console.print(f"  [green]✅[/green] app/models/{table['name']}_model.py")
@@ -506,7 +547,10 @@ def sync_models():
         console.print("\n[yellow]✨ Generando controllers...[/yellow]")
         controller_gen = ControllerGenerator()
         for table in new_tables:
-            is_auth = inspector.is_auth_table(table['name'])
+            if hasattr(inspector, 'is_auth_collection'):
+                is_auth = inspector.is_auth_collection(table['name'])
+            else:
+                is_auth = inspector.is_auth_table(table['name'])
             controller_gen.generate(table, is_auth)
             console.print(f"  [green]✅[/green] app/controllers/{table['name']}_controller.py")
         
@@ -516,7 +560,10 @@ def sync_models():
         console.print("\n[yellow]✨ Generando routes...[/yellow]")
         route_gen = RouteGenerator()
         for table in new_tables:
-            is_auth = inspector.is_auth_table(table['name'])
+            if hasattr(inspector, 'is_auth_collection'):
+                is_auth = inspector.is_auth_collection(table['name'])
+            else:
+                is_auth = inspector.is_auth_table(table['name'])
             route_gen.generate(table, is_auth)
             console.print(f"  [green]✅[/green] app/routes/{table['name']}_routes.py")
         
@@ -539,10 +586,12 @@ def sync_models():
         )
         console.print(summary_panel)
         
-        console.print("\n[green]💡 Ejecuta 'uvicorn app.main:app --reload' para iniciar el servidor[/green]\n")
+        console.print("\n[green]💡 Ejecuta 'lara start' para iniciar el servidor[/green]\n")
         
     except Exception as e:
         console.print(f"\n[bold red]❌ Error: {e}[/bold red]\n")
+        import traceback
+        console.print(f"[dim]{traceback.format_exc()}[/dim]\n")
         raise typer.Exit(1)
 
 
