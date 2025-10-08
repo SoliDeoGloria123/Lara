@@ -6,7 +6,7 @@
 
 [![Python](https://img.shields.io/badge/python-3.9+-blue?style=for-the-badge&logo=python)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
-[![PyPI](https://img.shields.io/badge/PyPI-0.1.0-orange?style=for-the-badge&logo=pypi)](https://pypi.org)
+[![PyPI](https://img.shields.io/badge/PyPI-3.0.0-orange?style=for-the-badge&logo=pypi)](https://pypi.org)
 
 **Genera proyectos FastAPI completos en segundos** 🚀
 
@@ -71,16 +71,22 @@ lara version
 
 ## 🚀 Uso Rápido
 
-### 1. Crear un Nuevo Proyecto
+### 1. Crear un Nuevo Proyecto (¡TODO AUTOMÁTICO!)
 
 ```bash
 lara create mi_proyecto
-cd mi_proyecto
 ```
 
-Esto genera:
+**¡Eso es todo!** Lara automáticamente:
+- ✅ Te pregunta el **connection string** de tu base de datos
+- ✅ Crea la estructura del proyecto
+- ✅ Crea el **entorno virtual** (venv)
+- ✅ Instala las **dependencias** (requirements.txt)
+- ✅ Configura el **.env** con tu base de datos
+
 ```
 mi_proyecto/
+├── venv/                    # ✅ Ya creado
 ├── app/
 │   ├── main.py              # FastAPI app
 │   ├── config.py            # Configuración
@@ -92,28 +98,19 @@ mi_proyecto/
 │   ├── middlewares/         # Middlewares (JWT, CORS)
 │   └── utils/               # Utilidades (auth, etc)
 ├── tests/
-├── .env.example
+├── .env                     # ✅ Ya configurado
 ├── requirements.txt
 └── README.md
 ```
 
-### 2. Configurar y Ejecutar
+### 2. Iniciar el Servidor
 
 ```bash
-# Crear entorno virtual
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Instalar dependencias
-pip install -r requirements.txt
-
-# Configurar base de datos
-cp .env.example .env
-# Editar .env con tu DATABASE_URL
-
-# Ejecutar
-uvicorn app.main:app --reload
+cd mi_proyecto
+lara start
 ```
+
+¡Ya está corriendo! 🎉 Accede a: http://localhost:8000/docs
 
 ### 3. Sincronizar con Base de Datos Existente
 
@@ -209,18 +206,45 @@ lara sync-models
 ## 📖 Comandos
 
 ### `lara create <nombre>`
-Crea un nuevo proyecto FastAPI completo.
+Crea un nuevo proyecto FastAPI completo **con configuración automática**.
 
 ```bash
 lara create mi_api
+# Te pide: Connection string de tu BD
+# ✨ Crea venv, instala deps, configura .env automáticamente
 ```
 
+**Opciones:**
+- `--skip-setup`: Omite la configuración automática (venv, deps, .env)
+
+### `lara start`
+Inicia el servidor FastAPI con uvicorn.
+
+```bash
+cd mi_proyecto
+lara start
+# Servidor en: http://localhost:8000
+# Docs en: http://localhost:8000/docs
+```
+
+**Opciones:**
+- `--host / -h`: Host del servidor (default: 127.0.0.1)
+- `--port / -p`: Puerto del servidor (default: 8000)
+- `--no-reload`: Desactiva auto-reload
+
 ### `lara get-database`
-Analiza la base de datos configurada en `.env` y muestra su estructura.
+Analiza la base de datos y muestra su estructura.
 
 ```bash
 lara get-database
+# O con parámetro:
+lara get-database -c "postgresql://user:pass@host/db"
 ```
+
+**Métodos de conexión (en orden de prioridad):**
+1. Parámetro `-c` / `--connection`
+2. Variable en `.env` (MONGODB_URL o DATABASE_URL)
+3. Input interactivo (te lo pide por terminal)
 
 ### `lara sync-models`
 Sincroniza modelos con la base de datos y genera código automáticamente.
@@ -297,34 +321,38 @@ GET  /api/auth/me        # Perfil del usuario actual (requiere token)
 ### Escenario: Competencia Senasoft
 
 ```bash
-# 1. Crear proyecto
+# 1. Crear proyecto (te pide el connection string)
 lara create senasoft2024
+# 📝 Connection string: [PEGAR EL CLUSTER/CONNECTION STRING AQUÍ]
+# ⏳ Configurando... venv, deps, .env
+# ✅ ¡Proyecto listo!
+
 cd senasoft2024
 
-# 2. Configurar entorno
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# 3. Configurar base de datos (te dan una BD existente)
-cp .env.example .env
-# Editar .env con credenciales
-
-# 4. Analizar BD
+# 2. Analizar BD
 lara get-database
 
-# 5. Generar todo el código
+# 3. Generar todo el código
 lara sync-models
 # Responder 'y' a todo
 
-# 6. Ejecutar
-uvicorn app.main:app --reload
+# 4. Ejecutar
+lara start
 
-# 7. Ver documentación automática
+# 5. Ver documentación automática
 # http://localhost:8000/docs
 ```
 
-**Tiempo total: ~2 minutos** ⚡
+**Tiempo total: ~1 minuto** ⚡
+
+### ¿Qué pasó detrás de escena?
+
+Cuando ejecutaste `lara create`:
+1. ✅ Creó la estructura completa del proyecto
+2. ✅ Creó el entorno virtual (`python -m venv venv`)
+3. ✅ Instaló todas las dependencias (`pip install -r requirements.txt`)
+4. ✅ Configuró `.env` con tu connection string
+5. ✅ Todo listo para `lara start`
 
 ---
 

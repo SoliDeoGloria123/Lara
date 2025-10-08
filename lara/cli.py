@@ -28,33 +28,170 @@ console = Console()
 @app.command()
 def create(
     name: str = typer.Argument(..., help="Nombre del proyecto"),
-    path: Optional[Path] = typer.Option(None, help="Ruta donde crear el proyecto")
+    path: Optional[Path] = typer.Option(None, help="Ruta donde crear el proyecto"),
+    skip_setup: bool = typer.Option(False, "--skip-setup", help="Omitir configuración automática (venv, deps, .env)")
 ):
-    """Crea un nuevo proyecto FastAPI con estructura completa"""
+    """Crea un nuevo proyecto FastAPI con estructura completa y configuración automática"""
     
     console.print(f"\n[bold green]🚀 Creando proyecto '{name}'...[/bold green]\n")
     
     try:
+        # 1. Generar estructura del proyecto
         generator = ProjectGenerator(name, path)
-        generator.generate()
+        project_path = generator.generate()
         
-        console.print(f"[bold green]✅ Proyecto '{name}' creado exitosamente![/bold green]\n")
+        console.print(f"[bold green]✅ Estructura del proyecto creada![/bold green]\n")
         
-        # Mostrar próximos pasos
-        panel = Panel(
-            f"""[yellow]1.[/yellow] cd {name}
+        if skip_setup:
+            # Mostrar pasos manuales si se omite setup
+            panel = Panel(
+                f"""[yellow]1.[/yellow] cd {name}
 [yellow]2.[/yellow] python -m venv venv
 [yellow]3.[/yellow] source venv/bin/activate  [dim](Windows: venv\\Scripts\\activate)[/dim]
 [yellow]4.[/yellow] pip install -r requirements.txt
 [yellow]5.[/yellow] cp .env.example .env
-[yellow]6.[/yellow] uvicorn app.main:app --reload""",
-            title="[bold cyan]📝 Próximos pasos[/bold cyan]",
-            border_style="cyan"
-        )
-        console.print(panel)
+[yellow]6.[/yellow] lara start""",
+                title="[bold cyan]📝 Próximos pasos[/bold cyan]",
+                border_style="cyan"
+            )
+            console.print(panel)
+            return
         
+        # 2. Pedir connection string (opcional para empezar sin BD)
+        console.print("[cyan]🔌 Configuración de base de datos[/cyan]")
+        console.print("[dim]Si no tienes una base de datos ahora, puedes dejarlo en blanco y configurarlo después.[/dim]\n")
+        
+        has_database = Confirm.ask("¿Deseas configurar una base de datos ahora?", default=True)
+        connection_string = None
+        
+        if has_database:
+            console.print("\n[cyan]💡 Ingresa el connection string de tu base de datos:[/cyan]")
+            console.print("[dim]Ejemplos:[/dim]")
+            console.print("[dim]  MongoDB: mongodb+srv://user:pass@cluster.mongodb.net/DB[/dim]")
+            console.print("[dim]  SQL Server: Data Source=localhost\\SQLEXPRESS;Initial Catalog=DB;...[/dim]")
+            console.print("[dim]  PostgreSQL: postgresql://user:pass@localhost:5432/db[/dim]")
+            console.print("[dim]  MySQL: mysql://user:pass@localhost:3306/db[/dim]\n")
+            
+            connection_string = typer.prompt("Connection string", default="")
+            
+            if connection_string and connection_string.strip():
+                connection_string = connection_string.strip()
+            else:
+                connection_string = None
+                console.print("[yellow]⚠️  Sin base de datos - puedes configurarla después en .env[/yellow]\n")
+        
+        # 3. Configuración automática
+        console.print("[yellow]⚙️  Configurando proyecto automáticamente...[/yellow]\n")
+        
+        import subprocess
+        import sys
+        from pathlib import Path
+        
+        project_dir = Path.cwd() / name
+        
+        # 3.1 Crear entorno virtual
+        console.print("  [cyan]1/4[/cyan] Creando entorno virtual...")
+        venv_result = subprocess.run(
+            [sys.executable, "-m", "venv", "venv"],
+            cwd=project_dir,
+            capture_output=True,
+            text=True
+        )
+        
+        if venv_result.returncode == 0:
+            console.print("      [green]✅ Entorno virtual creado[/green]")
+        else:
+            console.print("      [yellow]⚠️  No se pudo crear venv automáticamente[/yellow]")
+        
+        # 3.2 Determinar ejecutable de pip en el venv
+        if sys.platform == "win32":
+            pip_path = project_dir / "venv" / "Scripts" / "pip.exe"
+            python_path = project_dir / "venv" / "Scripts" / "python.exe"
+        else:
+            pip_path = project_dir / "venv" / "bin" / "pip"
+            python_path = project_dir / "venv" / "bin" / "python"
+        
+        # 3.3 Instalar dependencias
+        console.print("  [cyan]2/4[/cyan] Instalando dependencias...")
+        
+        if pip_path.exists():
+            pip_result = subprocess.run(
+                [str(pip_path), "install", "-r", "requirements.txt", "--quiet"],
+                cwd=project_dir,
+                capture_output=True,
+                text=True,
+                timeout=120
+            )
+            
+            if pip_result.returncode == 0:
+                console.print("      [green]✅ Dependencias instaladas[/green]")
+            else:
+                console.print("      [yellow]⚠️  Algunas dependencias pueden no haberse instalado[/yellow]")
+        else:
+            console.print("      [yellow]⚠️  Instala manualmente: pip install -r requirements.txt[/yellow]")
+        
+        # 3.4 Configurar .env
+        console.print("  [cyan]3/4[/cyan] Configurando .env...")
+        
+        env_example_path = project_dir / ".env.example"
+        env_path = project_dir / ".env"
+        
+        if env_example_path.exists():
+            # Leer .env.example
+            with open(env_example_path, 'r') as f:
+                env_content = f.read()
+            
+            # Si hay connection string, actualizar
+            if connection_string:
+                # Determinar qué variable usar
+                is_mongodb = "mongodb" in connection_string.lower()
+                
+                if is_mongodb:
+                    env_content = env_content.replace(
+                        'MONGODB_URL="mongodb://localhost:27017/mydatabase"',
+                        f'MONGODB_URL="{connection_string}"'
+                    )
+                else:
+                    env_content = env_content.replace(
+                        'DATABASE_URL="sqlite:///./app.db"',
+                        f'DATABASE_URL="{connection_string}"'
+                    )
+            
+            # Escribir .env
+            with open(env_path, 'w') as f:
+                f.write(env_content)
+            
+            if connection_string:
+                console.print("      [green]✅ .env configurado con tu base de datos[/green]")
+            else:
+                console.print("      [green]✅ .env creado (sin base de datos)[/green]")
+        
+        # 3.5 Mensaje final
+        console.print("  [cyan]4/4[/cyan] Finalizando configuración...")
+        console.print("      [green]✅ Proyecto completamente configurado![/green]\n")
+        
+        # Panel de éxito
+        success_panel = Panel(
+            f"""[bold green]✨ ¡Proyecto '{name}' listo para usar![/bold green]
+
+[yellow]Para comenzar:[/yellow]
+  cd {name}
+  lara start
+
+[dim]El entorno virtual se activará automáticamente.[/dim]""",
+            title="[bold cyan]🎉 Configuración Completa[/bold cyan]",
+            border_style="green"
+        )
+        console.print(success_panel)
+        console.print()
+        
+    except subprocess.TimeoutExpired:
+        console.print("\n[bold red]❌ Timeout instalando dependencias[/bold red]")
+        console.print("[yellow]💡 Instala manualmente con: pip install -r requirements.txt[/yellow]\n")
     except Exception as e:
-        console.print(f"[bold red]❌ Error al crear proyecto: {e}[/bold red]")
+        console.print(f"\n[bold red]❌ Error al crear proyecto: {e}[/bold red]")
+        import traceback
+        console.print(f"[dim]{traceback.format_exc()}[/dim]\n")
         raise typer.Exit(1)
 
 
@@ -445,6 +582,77 @@ def generate_middleware(
         
     except Exception as e:
         console.print(f"[bold red]❌ Error: {e}[/bold red]\n")
+        raise typer.Exit(1)
+
+
+@app.command()
+def start(
+    host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host del servidor"),
+    port: int = typer.Option(8000, "--port", "-p", help="Puerto del servidor"),
+    reload: bool = typer.Option(True, "--reload/--no-reload", help="Auto-reload en cambios de código")
+):
+    """Inicia el servidor FastAPI con el entorno virtual activado"""
+    
+    import subprocess
+    import sys
+    from pathlib import Path
+    
+    console.print("\n[bold green]🚀 Iniciando servidor FastAPI...[/bold green]\n")
+    
+    # Verificar que estamos en un proyecto Lara
+    if not Path("app/main.py").exists():
+        console.print("[bold red]❌ No se encontró app/main.py[/bold red]")
+        console.print("[yellow]💡 Asegúrate de estar en la raíz de tu proyecto Lara[/yellow]\n")
+        raise typer.Exit(1)
+    
+    # Verificar si existe venv
+    if sys.platform == "win32":
+        python_path = Path("venv/Scripts/python.exe")
+        activate_cmd = "venv\\Scripts\\activate"
+    else:
+        python_path = Path("venv/bin/python")
+        activate_cmd = "source venv/bin/activate"
+    
+    if not python_path.exists():
+        console.print("[yellow]⚠️  No se encontró entorno virtual[/yellow]")
+        console.print(f"[yellow]💡 Ejecuta: python -m venv venv && {activate_cmd}[/yellow]\n")
+        # Intentar con python del sistema
+        python_path = sys.executable
+    
+    # Construir comando uvicorn
+    reload_flag = "--reload" if reload else ""
+    
+    try:
+        console.print(f"[cyan]🌐 Servidor corriendo en: [bold]http://{host}:{port}[/bold][/cyan]")
+        console.print(f"[cyan]📚 Documentación en: [bold]http://{host}:{port}/docs[/bold][/cyan]")
+        console.print(f"[dim]Presiona Ctrl+C para detener el servidor[/dim]\n")
+        console.print("─" * 70)
+        console.print()
+        
+        # Ejecutar uvicorn
+        cmd = [
+            str(python_path),
+            "-m",
+            "uvicorn",
+            "app.main:app",
+            "--host", host,
+            "--port", str(port)
+        ]
+        
+        if reload:
+            cmd.append("--reload")
+        
+        # Ejecutar en modo interactivo para ver logs
+        subprocess.run(cmd, cwd=Path.cwd())
+        
+    except KeyboardInterrupt:
+        console.print("\n\n[yellow]⚠️  Servidor detenido por el usuario[/yellow]\n")
+    except FileNotFoundError:
+        console.print("\n[bold red]❌ No se encontró uvicorn[/bold red]")
+        console.print("[yellow]💡 Instala dependencias: pip install -r requirements.txt[/yellow]\n")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"\n[bold red]❌ Error al iniciar servidor: {e}[/bold red]\n")
         raise typer.Exit(1)
 
 

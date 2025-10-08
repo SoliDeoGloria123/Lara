@@ -36,6 +36,7 @@ class ProjectGenerator:
         self._generate_config_files()
         self._generate_docs()
         self._init_git()
+        return self.project_path
     
     def _create_directories(self):
         """Crea la estructura de directorios"""

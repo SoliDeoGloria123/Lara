@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lara-cli"
-version = "0.1.0"
+version = "3.0.0"
 description = "CLI tool para generar proyectos FastAPI rápidamente para competencias de programación"
 readme = "README.md"
 requires-python = ">=3.9"

@@ -7,45 +7,20 @@ API REST generada con [Lara](https://github.com/SoliDeoGloria123/Lara) - FastAPI
 ### Requisitos
 
 - Python 3.9+
-- pip
-
-### Instalación
-
-1. Crear entorno virtual:
-```bash
-python -m venv venv
-```
-
-2. Activar entorno virtual:
-```bash
-# Linux/Mac
-source venv/bin/activate
-
-# Windows
-venv\Scripts\activate
-```
-
-3. Instalar dependencias:
-```bash
-pip install -r requirements.txt
-```
-
-4. Configurar variables de entorno:
-```bash
-cp .env.example .env
-# Editar .env con tus configuraciones
-```
+- Lara CLI instalado
 
 ### Ejecutar
 
 ```bash
-uvicorn app.main:app --reload
+lara start
 ```
 
 La API estará disponible en:
 - **Documentación interactiva**: http://localhost:8000/docs
 - **Documentación alternativa**: http://localhost:8000/redoc
 - **Endpoint raíz**: http://localhost:8000/
+
+> ⚡ **¡Ya está todo configurado!** Lara creó automáticamente el entorno virtual, instaló las dependencias y configuró la base de datos.
 
 ## 📁 Estructura del Proyecto
 
@@ -71,20 +46,18 @@ La API estará disponible en:
 
 ## 🛠️ Comandos Lara
 
-Si tienes Lara instalado, puedes usar:
-
 ```bash
+# Iniciar servidor de desarrollo
+lara start
+
 # Analizar base de datos existente
-lara get database
+lara get-database
 
 # Sincronizar modelos con la BD
-lara sync models
+lara sync-models
 
-# Crear nueva API (modelo + schema + controller + routes)
-lara create api nombre_recurso
-
-# Generar middleware
-lara generate middleware nombre_middleware
+# Generar middleware personalizado
+lara generate-middleware nombre_middleware
 ```
 
 ## 📝 Desarrollo
