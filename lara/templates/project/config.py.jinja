@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     
     # Database
+    DATABASE_TYPE: str = "sqlite"
     DATABASE_URL: str = "sqlite:///./app.db"
     MONGODB_URL: str = ""
     
@@ -19,6 +20,10 @@ class Settings(BaseSettings):
     
     # CORS
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    
+    # Application
+    DEBUG: bool = True
+    TESTING: bool = False
     
     class Config:
         env_file = ".env"
