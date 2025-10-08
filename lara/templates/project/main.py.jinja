@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
 
-# Importar routers aquí
-# from app.routes import user_routes
+# Importar routers
+from app.routes.user import router as user_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -21,8 +21,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Registrar routers aquí
-# app.include_router(user_routes.router, prefix="/api/users", tags=["users"])
+# Registrar routers
+app.include_router(user_router, prefix="/api/users", tags=["users"])
 
 @app.on_event("startup")
 async def startup():

@@ -1,0 +1,35 @@
+"""Schema de ejemplo - Usuario"""
+from pydantic import BaseModel, EmailStr
+from typing import Optional
+from datetime import datetime
+
+
+class UserBase(BaseModel):
+    """Schema base para Usuario"""
+    email: EmailStr
+    username: str
+    full_name: Optional[str] = None
+    is_active: bool = True
+
+
+class UserCreate(UserBase):
+    """Schema para crear usuario"""
+    pass
+
+
+class UserUpdate(BaseModel):
+    """Schema para actualizar usuario"""
+    email: Optional[EmailStr] = None
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class UserResponse(UserBase):
+    """Schema para respuesta de usuario"""
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True

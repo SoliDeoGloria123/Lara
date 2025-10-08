@@ -85,6 +85,26 @@ class ProjectGenerator:
         template = self.env.get_template('project/auth.py.jinja')
         content = template.render()
         write_file(self.project_path / "app" / "utils" / "auth.py", content)
+        
+        # Generar ejemplo de modelo User
+        template = self.env.get_template('project/example_user_model.py.jinja')
+        content = template.render()
+        write_file(self.project_path / "app" / "models" / "user.py", content)
+        
+        # Generar ejemplo de schema User
+        template = self.env.get_template('project/example_user_schema.py.jinja')
+        content = template.render()
+        write_file(self.project_path / "app" / "schemas" / "user.py", content)
+        
+        # Generar ejemplo de controller User
+        template = self.env.get_template('project/example_user_controller.py.jinja')
+        content = template.render()
+        write_file(self.project_path / "app" / "controllers" / "user.py", content)
+        
+        # Generar ejemplo de rutas User
+        template = self.env.get_template('project/example_user_routes.py.jinja')
+        content = template.render()
+        write_file(self.project_path / "app" / "routes" / "user.py", content)
     
     def _generate_config_files(self):
         """Genera archivos de configuración"""
