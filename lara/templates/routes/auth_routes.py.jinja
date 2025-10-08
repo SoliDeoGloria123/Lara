@@ -1,0 +1,67 @@
+"""Routes de autenticación para {{ class_name }}"""
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.controllers.{{ table_name }}_controller import {{ class_name }}Controller
+from app.schemas.{{ table_name }}_schema import (
+    {{ class_name }}Create,
+    {{ class_name }}Response,
+    Token
+)
+from app.utils.auth import decode_access_token
+
+router = APIRouter()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """Dependency para obtener el usuario actual desde el token"""
+    payload = decode_access_token(token)
+    
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido o expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user_id = payload.get("user_id")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    return {{ class_name }}Controller.get_current_user(db, user_id)
+
+
+@router.post("/register", response_model={{ class_name }}Response, status_code=status.HTTP_201_CREATED)
+def register(
+    user_data: {{ class_name }}Create,
+    db: Session = Depends(get_db)
+):
+    """Registra un nuevo usuario"""
+    return {{ class_name }}Controller.register(db, user_data)
+
+
+@router.post("/token", response_model=Token)
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    """Autentica un usuario y retorna un token"""
+    return {{ class_name }}Controller.login(db, form_data.username, form_data.password)
+
+
+@router.get("/me", response_model={{ class_name }}Response)
+def get_current_user_info(
+    current_user = Depends(get_current_user)
+):
+    """Obtiene información del usuario actual"""
+    return current_user

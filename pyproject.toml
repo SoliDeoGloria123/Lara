@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lara-cli"
+version = "0.1.0"
+description = "CLI tool para generar proyectos FastAPI rápidamente para competencias de programación"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "SoliDeoGloria123", email = "contact@lara-cli.dev"}
+]
+keywords = ["fastapi", "cli", "generator", "api", "rest", "crud"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "jinja2>=3.1.0",
+    "sqlalchemy>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "click>=8.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+mongodb = [
+    "pymongo>=4.6.0",
+    "motor>=3.3.0",
+]
+
+[project.scripts]
+lara = "lara.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/SoliDeoGloria123/Lara"
+Documentation = "https://github.com/SoliDeoGloria123/Lara#readme"
+Repository = "https://github.com/SoliDeoGloria123/Lara"
+Issues = "https://github.com/SoliDeoGloria123/Lara/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lara*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+lara = ["templates/**/*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"

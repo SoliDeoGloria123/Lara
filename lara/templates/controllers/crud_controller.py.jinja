@@ -1,0 +1,142 @@
+"""Controller CRUD para {{ class_name }}"""
+from sqlalchemy.orm import Session
+from app.models.{{ table_name }}_model import {{ class_name }}
+from app.schemas.{{ table_name }}_schema import {{ class_name }}Create, {{ class_name }}Update
+from fastapi import HTTPException, status
+from typing import List, Optional
+
+
+class {{ class_name }}Controller:
+    """Controller para operaciones CRUD de {{ class_name }}"""
+    
+    @staticmethod
+    def get_all(
+        db: Session,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[{{ class_name }}]:
+        """
+        Obtiene todos los registros
+        
+        Args:
+            db: Sesión de base de datos
+            skip: Cantidad de registros a saltar
+            limit: Cantidad máxima de registros a retornar
+        
+        Returns:
+            Lista de registros
+        """
+        return db.query({{ class_name }}).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_by_id(db: Session, id: int) -> {{ class_name }}:
+        """
+        Obtiene un registro por ID
+        
+        Args:
+            db: Sesión de base de datos
+            id: ID del registro
+        
+        Returns:
+            Registro encontrado
+        
+        Raises:
+            HTTPException: Si no se encuentra el registro
+        """
+        record = db.query({{ class_name }}).filter({{ class_name }}.id == id).first()
+        if not record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"{{ class_name }} con id {id} no encontrado"
+            )
+        return record
+    
+    @staticmethod
+    def create(db: Session, data: {{ class_name }}Create) -> {{ class_name }}:
+        """
+        Crea un nuevo registro
+        
+        Args:
+            db: Sesión de base de datos
+            data: Datos del registro a crear
+        
+        Returns:
+            Registro creado
+        """
+        db_record = {{ class_name }}(**data.dict())
+        db.add(db_record)
+        db.commit()
+        db.refresh(db_record)
+        return db_record
+    
+    @staticmethod
+    def update(
+        db: Session,
+        id: int,
+        data: {{ class_name }}Update
+    ) -> {{ class_name }}:
+        """
+        Actualiza un registro existente
+        
+        Args:
+            db: Sesión de base de datos
+            id: ID del registro
+            data: Datos a actualizar
+        
+        Returns:
+            Registro actualizado
+        
+        Raises:
+            HTTPException: Si no se encuentra el registro
+        """
+        db_record = {{ class_name }}Controller.get_by_id(db, id)
+        
+        update_data = data.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_record, key, value)
+        
+        db.commit()
+        db.refresh(db_record)
+        return db_record
+    
+    @staticmethod
+    def delete(db: Session, id: int) -> dict:
+        """
+        Elimina un registro
+        
+        Args:
+            db: Sesión de base de datos
+            id: ID del registro
+        
+        Returns:
+            Mensaje de confirmación
+        
+        Raises:
+            HTTPException: Si no se encuentra el registro
+        """
+        db_record = {{ class_name }}Controller.get_by_id(db, id)
+        db.delete(db_record)
+        db.commit()
+        return {"message": "{{ class_name }} eliminado correctamente"}
+    
+    @staticmethod
+    def search(
+        db: Session,
+        query: str,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[{{ class_name }}]:
+        """
+        Busca registros (implementar según campos específicos)
+        
+        Args:
+            db: Sesión de base de datos
+            query: Término de búsqueda
+            skip: Cantidad de registros a saltar
+            limit: Cantidad máxima de registros
+        
+        Returns:
+            Lista de registros que coinciden con la búsqueda
+        """
+        # TODO: Implementar búsqueda según campos específicos del modelo
+        return db.query({{ class_name }}).offset(skip).limit(limit).all()

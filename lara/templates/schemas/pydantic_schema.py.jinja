@@ -1,0 +1,61 @@
+"""Schemas Pydantic para {{ class_name }}"""
+from pydantic import BaseModel, Field{% if is_auth_table %}, EmailStr{% endif %}
+from typing import Optional
+{% if has_timestamps %}
+from datetime import datetime
+{% endif %}
+
+
+class {{ class_name }}Base(BaseModel):
+    """Schema base para {{ class_name }}"""
+    {% for field in fields %}
+    {% if not field.skip_in_create and not field.is_password %}
+    {{ field.name }}: {% if field.nullable %}Optional[{% endif %}{% if field.is_email %}EmailStr{% else %}{{ field.python_type }}{% endif %}{% if field.nullable %}]{% endif %}{% if field.max_length %} = Field(..., max_length={{ field.max_length }}){% endif %}
+    {% endif %}
+    {% endfor %}
+
+
+class {{ class_name }}Create({{ class_name }}Base):
+    """Schema para crear {{ class_name }}"""
+    {% if is_auth_table %}
+    password: str = Field(..., min_length=8)
+    {% endif %}
+    pass
+
+
+class {{ class_name }}Update(BaseModel):
+    """Schema para actualizar {{ class_name }}"""
+    {% for field in fields %}
+    {% if not field.skip_in_create and not field.primary_key and not field.is_password %}
+    {{ field.name }}: Optional[{% if field.is_email %}EmailStr{% else %}{{ field.python_type }}{% endif %}] = None
+    {% endif %}
+    {% endfor %}
+
+
+class {{ class_name }}Response({{ class_name }}Base):
+    """Schema de respuesta para {{ class_name }}"""
+    {% for field in fields %}
+    {% if field.primary_key or field.is_timestamp %}
+    {{ field.name }}: {{ field.python_type }}
+    {% endif %}
+    {% endfor %}
+    {% if is_auth_table %}
+    # No incluir password en respuesta
+    {% endif %}
+    
+    class Config:
+        from_attributes = True
+
+
+{% if is_auth_table %}
+class Token(BaseModel):
+    """Schema para token de autenticación"""
+    access_token: str
+    token_type: str = "bearer"
+
+
+class TokenData(BaseModel):
+    """Schema para datos del token"""
+    username: Optional[str] = None
+    user_id: Optional[int] = None
+{% endif %}

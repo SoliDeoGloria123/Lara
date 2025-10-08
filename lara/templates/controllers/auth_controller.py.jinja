@@ -1,0 +1,112 @@
+"""Controller de autenticación para {{ class_name }}"""
+from sqlalchemy.orm import Session
+from app.models.{{ table_name }}_model import {{ class_name }}
+from app.schemas.{{ table_name }}_schema import {{ class_name }}Create, Token
+from app.utils.auth import get_password_hash, verify_password, create_access_token
+from fastapi import HTTPException, status
+from datetime import timedelta
+from app.config import settings
+
+
+class {{ class_name }}Controller:
+    """Controller para autenticación de usuarios"""
+    
+    @staticmethod
+    def register(db: Session, user_data: {{ class_name }}Create) -> {{ class_name }}:
+        """
+        Registra un nuevo usuario
+        
+        Args:
+            db: Sesión de base de datos
+            user_data: Datos del usuario
+        
+        Returns:
+            Usuario creado
+        
+        Raises:
+            HTTPException: Si el usuario ya existe
+        """
+        # Verificar si el usuario ya existe
+        existing_user = db.query({{ class_name }}).filter(
+            {{ class_name }}.email == user_data.email
+        ).first()
+        
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El usuario ya existe"
+            )
+        
+        # Hash de la contraseña
+        hashed_password = get_password_hash(user_data.password)
+        
+        # Crear usuario
+        user_dict = user_data.dict()
+        user_dict.pop('password')
+        user_dict['hashed_password'] = hashed_password
+        
+        db_user = {{ class_name }}(**user_dict)
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        
+        return db_user
+    
+    @staticmethod
+    def login(db: Session, email: str, password: str) -> Token:
+        """
+        Autentica un usuario
+        
+        Args:
+            db: Sesión de base de datos
+            email: Email del usuario
+            password: Contraseña del usuario
+        
+        Returns:
+            Token de acceso
+        
+        Raises:
+            HTTPException: Si las credenciales son inválidas
+        """
+        user = db.query({{ class_name }}).filter({{ class_name }}.email == email).first()
+        
+        if not user or not verify_password(password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Credenciales inválidas",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Crear token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.email, "user_id": user.id},
+            expires_delta=access_token_expires
+        )
+        
+        return Token(access_token=access_token, token_type="bearer")
+    
+    @staticmethod
+    def get_current_user(db: Session, user_id: int) -> {{ class_name }}:
+        """
+        Obtiene el usuario actual desde el token
+        
+        Args:
+            db: Sesión de base de datos
+            user_id: ID del usuario
+        
+        Returns:
+            Usuario encontrado
+        
+        Raises:
+            HTTPException: Si el usuario no existe
+        """
+        user = db.query({{ class_name }}).filter({{ class_name }}.id == user_id).first()
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario no encontrado"
+            )
+        
+        return user

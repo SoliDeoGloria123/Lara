@@ -1,0 +1,72 @@
+"""Routes CRUD para {{ class_name }}"""
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.orm import Session
+from typing import List
+
+from app.database import get_db
+from app.controllers.{{ table_name }}_controller import {{ class_name }}Controller
+from app.schemas.{{ table_name }}_schema import (
+    {{ class_name }}Create,
+    {{ class_name }}Update,
+    {{ class_name }}Response
+)
+
+router = APIRouter()
+
+
+@router.get("/", response_model=List[{{ class_name }}Response])
+def get_all_{{ table_name }}(
+    skip: int = Query(0, ge=0, description="Registros a saltar"),
+    limit: int = Query(100, ge=1, le=100, description="Límite de registros"),
+    db: Session = Depends(get_db)
+):
+    """Obtiene todos los registros de {{ table_name }}"""
+    return {{ class_name }}Controller.get_all(db, skip, limit)
+
+
+@router.get("/{id}", response_model={{ class_name }}Response)
+def get_{{ table_name }}_by_id(
+    id: int,
+    db: Session = Depends(get_db)
+):
+    """Obtiene un registro de {{ table_name }} por ID"""
+    return {{ class_name }}Controller.get_by_id(db, id)
+
+
+@router.post("/", response_model={{ class_name }}Response, status_code=status.HTTP_201_CREATED)
+def create_{{ table_name }}(
+    data: {{ class_name }}Create,
+    db: Session = Depends(get_db)
+):
+    """Crea un nuevo registro de {{ table_name }}"""
+    return {{ class_name }}Controller.create(db, data)
+
+
+@router.put("/{id}", response_model={{ class_name }}Response)
+def update_{{ table_name }}(
+    id: int,
+    data: {{ class_name }}Update,
+    db: Session = Depends(get_db)
+):
+    """Actualiza un registro de {{ table_name }}"""
+    return {{ class_name }}Controller.update(db, id, data)
+
+
+@router.delete("/{id}")
+def delete_{{ table_name }}(
+    id: int,
+    db: Session = Depends(get_db)
+):
+    """Elimina un registro de {{ table_name }}"""
+    return {{ class_name }}Controller.delete(db, id)
+
+
+@router.get("/search/", response_model=List[{{ class_name }}Response])
+def search_{{ table_name }}(
+    q: str = Query(..., description="Término de búsqueda"),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """Busca registros de {{ table_name }}"""
+    return {{ class_name }}Controller.search(db, q, skip, limit)

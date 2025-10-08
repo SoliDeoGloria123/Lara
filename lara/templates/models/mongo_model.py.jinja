@@ -1,0 +1,26 @@
+"""Modelo {{ class_name }} para MongoDB"""
+from beanie import Document
+from typing import Optional
+{% if has_timestamps %}
+from datetime import datetime
+{% endif %}
+
+
+class {{ class_name }}(Document):
+    """Modelo para la colección {{ collection_name }}"""
+    
+    {% for field in fields %}
+    {{ field.name }}: {% if field.optional %}Optional[{{ field.type }}]{% else %}{{ field.type }}{% endif %}
+    {% endfor %}
+    
+    class Settings:
+        name = "{{ collection_name }}"
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                {% for field in fields[:3] %}
+                "{{ field.name }}": "example_value",
+                {% endfor %}
+            }
+        }

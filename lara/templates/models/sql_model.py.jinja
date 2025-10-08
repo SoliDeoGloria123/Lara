@@ -1,0 +1,38 @@
+"""Modelo {{ class_name }}"""
+from sqlalchemy import {{ imports|join(', ') }}
+{% if 'relationship' in imports %}
+from sqlalchemy.orm import relationship
+{% endif %}
+from app.database import Base
+{% if has_timestamps %}
+from datetime import datetime
+{% endif %}
+
+
+class {{ class_name }}(Base):
+    """Modelo para la tabla {{ table_name }}"""
+    
+    __tablename__ = "{{ table_name }}"
+    
+    {% for col in columns %}
+    {{ col.name }} = Column(
+        {{ col.type }}{% if col.length %}({{ col.length }}){% endif %},
+        {% if col.primary_key %}primary_key=True,{% endif %}
+        {% if col.index %}index=True,{% endif %}
+        {% if col.foreign_key %}ForeignKey("{{ col.foreign_key }}"),{% endif %}
+        {% if not col.nullable and not col.primary_key %}nullable=False,{% endif %}
+        {% if col.unique %}unique=True,{% endif %}
+        {% if col.has_default %}default={{ col.default_value }},{% endif %}
+        {% if col.onupdate %}onupdate={{ col.onupdate }},{% endif %}
+    )
+    {% endfor %}
+    
+    {% if relationships %}
+    # Relaciones
+    {% for rel in relationships %}
+    {{ rel.name }} = relationship("{{ rel.target_class }}", back_populates="{{ rel.back_populates }}")
+    {% endfor %}
+    {% endif %}
+    
+    def __repr__(self):
+        return f"<{{ class_name }}(id={self.id})>"

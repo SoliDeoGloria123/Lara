@@ -1,0 +1,45 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.config import settings
+from app.database import engine, Base
+
+# Importar routers aquí
+# from app.routes import user_routes
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version="1.0.0",
+    description="API generated with Lara CLI"
+)
+
+# Configurar CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Registrar routers aquí
+# app.include_router(user_routes.router, prefix="/api/users", tags=["users"])
+
+@app.on_event("startup")
+async def startup():
+    """Eventos de inicio de la aplicación"""
+    # Crear tablas si no existen (solo para desarrollo)
+    Base.metadata.create_all(bind=engine)
+
+@app.get("/")
+def read_root():
+    """Endpoint raíz"""
+    return {
+        "message": "Welcome to {{ project_name }} API",
+        "docs": "/docs",
+        "version": "1.0.0"
+    }
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy"}

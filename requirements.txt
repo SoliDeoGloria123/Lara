@@ -1,0 +1,25 @@
+# Core dependencies
+typer>=0.9.0
+rich>=13.0.0
+jinja2>=3.1.0
+sqlalchemy>=2.0.0
+python-dotenv>=1.0.0
+click>=8.0.0
+
+# Database drivers - MongoDB
+pymongo>=4.6.0
+motor>=3.3.2
+
+# Database drivers - SQL
+# Instalar según la base de datos que uses:
+
+# PostgreSQL
+# psycopg2-binary>=2.9.9
+
+# MySQL / MariaDB
+# pymysql>=1.1.0
+
+# SQL Server (Windows/Linux/Mac)
+# pyodbc>=5.0.1
+# Nota: También necesitas instalar ODBC Driver 17 for SQL Server
+# Descarga: https://docs.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server
