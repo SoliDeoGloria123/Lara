@@ -3,8 +3,8 @@ requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lara-cli"
-version = "3.0.7"
+name = "Lara"
+version = "3.0.8"
 description = "CLI tool para generar proyectos FastAPI rápidamente para competencias de programación"
 readme = "README.md"
 requires-python = ">=3.9"
